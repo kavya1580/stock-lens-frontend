@@ -152,3 +152,30 @@ export interface StockBundle {
   score: StockScore;
   isDemo: boolean;
 }
+
+export interface AwardWinningStock {
+  companyName?: string;
+  symbol?: string;
+  orderFromWho?: string;
+  orderAmount?: string;
+  marketCap?: string;
+  fundamentalScore?: number | string;
+  rating?: string;
+  announcementHeadline?: string;
+  announcementDate?: string;
+  sourceUrl?: string;
+}
+
+export interface AwardWinningStocksQuery {
+  pageno?: number;
+  prevDate?: string;
+  toDate?: string;
+  search?: string;
+}
+
+export interface AwardWinningStocksPage {
+  items: AwardWinningStock[];
+  pageNo: number;
+  totalPages?: number | null;
+  totalCount?: number | null;
+}

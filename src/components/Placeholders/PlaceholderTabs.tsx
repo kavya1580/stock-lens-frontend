@@ -7,6 +7,7 @@ import InsightsIcon from '@mui/icons-material/Insights';
 import NewspaperIcon from '@mui/icons-material/Newspaper';
 import QueryStatsIcon from '@mui/icons-material/QueryStats';
 import ShieldIcon from '@mui/icons-material/Shield';
+import { OrderWinsPage } from '../../pages/OrderWins/OrderWinsPage';
 
 interface PlaceholderTabsProps {
   type: 'ai' | 'orders' | 'more';
@@ -47,6 +48,10 @@ const headings = {
 };
 
 export function PlaceholderTab({ type }: PlaceholderTabsProps) {
+  if (type === 'orders') {
+    return <OrderWinsPage />;
+  }
+
   const [title, subtitle] = headings[type];
 
   return (

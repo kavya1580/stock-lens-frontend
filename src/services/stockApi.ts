@@ -1,5 +1,13 @@
 import { demoFundamentals, demoIndicators, demoScore } from '../data/demoStock';
-import type { CompanyFundamentals, StockBundle, StockScore, TechnicalIndicators } from '../types/stock';
+import type {
+  AwardWinningStock,
+  AwardWinningStocksPage,
+  AwardWinningStocksQuery,
+  CompanyFundamentals,
+  StockBundle,
+  StockScore,
+  TechnicalIndicators,
+} from '../types/stock';
 
 async function getJson<T>(path: string): Promise<T> {
   const response = await fetch(path);
@@ -11,6 +19,63 @@ async function getJson<T>(path: string): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+function normalizeDateParam(value?: string): string {
+  return (value || '').replace(/[^0-9]/g, '');
+}
+
+function toText(value: unknown): string | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  const text = String(value).trim();
+  if (!text || text === '—') {
+    return null;
+  }
+
+  return text;
+}
+
+function toOptionalNumber(value: unknown): number | null {
+  if (value === null || value === undefined || value === '') {
+    return null;
+  }
+
+  const parsed = Number.parseFloat(String(value).replace(/[^0-9.+-]/g, ''));
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function normalizeAwardWinningStock(raw: any): AwardWinningStock {
+  return {
+    companyName: toText(raw?.companyName) || toText(raw?.company_name) || 'Unknown company',
+    symbol: toText(raw?.symbol) || '—',
+    orderFromWho: toText(raw?.orderFromWho),
+    orderAmount: toText(raw?.orderAmount),
+    marketCap: toText(raw?.marketCap),
+    fundamentalScore: toOptionalNumber(raw?.fundamentalScore),
+    rating: toText(raw?.rating),
+    announcementHeadline: toText(raw?.announcementHeadline),
+    announcementDate: toText(raw?.announcementDate),
+    sourceUrl: toText(raw?.sourceUrl),
+  };
+}
+
+function extractAwardWinningItems(raw: any): AwardWinningStock[] {
+  if (Array.isArray(raw)) {
+    return raw;
+  }
+
+  const candidates = [raw?.data, raw?.items, raw?.results, raw?.stocks, raw?.payload?.data, raw?.payload?.items];
+
+  for (const candidate of candidates) {
+    if (Array.isArray(candidate)) {
+      return candidate;
+    }
+  }
+
+  return [];
+}
+
 // Transform raw API response to CompanyFundamentals
 function transformFundamentals(raw: any): CompanyFundamentals {
   console.log("transformFundamentals called with raw:", raw);
@@ -20,6 +85,14 @@ function transformFundamentals(raw: any): CompanyFundamentals {
     if (value === null || value === undefined) return 'N/A';
     if (typeof value === 'object') return JSON.stringify(value);
     return String(value);
+  };
+  
+  // Helper to extract percent numbers from various possible fields/strings
+  const extractPercent = (value: any): number => {
+    if (value === null || value === undefined) return 0;
+    const s = String(value).replace('%', '').replace(/[^0-9.\-]/g, '').trim();
+    const n = parseFloat(s);
+    return Number.isFinite(n) ? n : 0;
   };
 
   // Helper to safely extract sector as string
@@ -56,7 +129,10 @@ function transformFundamentals(raw: any): CompanyFundamentals {
     // Current Price & Performance
     currentPrice: Number(toString(raw.currentPrice).replace(/[^\d.]/g, '')) || 0,
     marketCap: toString(raw.marketCap),
-    dailyChangePercent: Number(toString(raw.dailyChangePercent).replace('%', '')) || 0,
+    // Accept multiple possible keys for the change percent coming from the API
+    dailyChangePercent: extractPercent(
+      raw.changePercent ?? raw.change_percent ?? raw.change ?? raw.dailyChangePercent ?? raw.changePercent,
+    ),
     eps: toString(raw.eps),
 
     // Valuation Metrics
@@ -177,14 +253,18 @@ export async function getStockBundle(symbol: string): Promise<StockBundle> {
 
   try {
     console.log("🔄 Fetching stock data for:", normalizedSymbol);
-    const [fundamentalsRaw, indicatorsRaw, scoreRaw] = await Promise.all([
-      getJson<any>(`/api/stocks/${normalizedSymbol}/fundamentals`),
+    // New merged endpoint which returns { fundamentals: {...}, score: {...} }
+    const [analysisRaw, indicatorsRaw] = await Promise.all([
+      getJson<any>(`/api/stocks/${normalizedSymbol}/fundamentals/analysis`),
       getJson<TechnicalIndicators>(`/api/stocks/${normalizedSymbol}/indicators?exchange=NSE&range=6mo`),
-      getJson<any>(`/api/stocks/${normalizedSymbol}/score`),
     ]);
-    
-    console.log("✅ API responses received:", { fundamentalsRaw, indicatorsRaw, scoreRaw });
-    
+
+    // Support both the merged shape and a fallback flat shape
+    const fundamentalsRaw = analysisRaw?.fundamentals ?? analysisRaw ?? {};
+    const scoreRaw = analysisRaw?.score ?? (analysisRaw?.score === undefined ? {} : analysisRaw?.score);
+
+    console.log("✅ API responses received:", { analysisRaw, indicatorsRaw });
+
     const fundamentals = transformFundamentals(fundamentalsRaw);
     const indicators = indicatorsRaw;
     const score = transformScore(scoreRaw);
@@ -201,4 +281,37 @@ export async function getStockBundle(symbol: string): Promise<StockBundle> {
       isDemo: true,
     };
   }
+}
+
+export async function getAwardWinningStocks(query: AwardWinningStocksQuery = {}): Promise<AwardWinningStocksPage> {
+  const params = new URLSearchParams();
+  const pageNo = Number.isFinite(query.pageno) && (query.pageno || 0) > 0 ? Math.floor(query.pageno || 1) : 1;
+
+  params.set('pageno', String(pageNo));
+
+  const prevDate = normalizeDateParam(query.prevDate);
+  const toDate = normalizeDateParam(query.toDate);
+  const search = (query.search || '').trim();
+
+  if (prevDate) {
+    params.set('prevDate', prevDate);
+  }
+
+  if (toDate) {
+    params.set('toDate', toDate);
+  }
+
+  if (search) {
+    params.set('search', search);
+  }
+
+  const raw = await getJson<any>(`/api/stocks/awards?${params.toString()}`);
+  const items = extractAwardWinningItems(raw).map(normalizeAwardWinningStock);
+
+  return {
+    items,
+    pageNo: Number(raw?.pageNo ?? raw?.page ?? pageNo) || pageNo,
+    totalPages: raw?.totalPages ?? raw?.total_pages ?? raw?.pages ?? null,
+    totalCount: raw?.totalCount ?? raw?.total_count ?? raw?.count ?? null,
+  };
 }

@@ -6,13 +6,43 @@ interface ShareholdingTrendProps {
 }
 
 export function ShareholdingTrend({ shareholding }: ShareholdingTrendProps) {
-  const data = shareholding.promoterHoldingQuarterly.map((point, index) => ({
-    period: point.period,
-    Promoters: point.value,
-    FIIs: shareholding.fiiHoldingQuarterly[index].value,
-    DIIs: shareholding.diiHoldingQuarterly[index].value,
-    Public: shareholding.publicHoldingQuarterly[index].value,
-  }));
+  const promoterSeries = shareholding?.promoterHoldingQuarterly ?? [];
+  const fiiSeries = shareholding?.fiiHoldingQuarterly ?? [];
+  const diiSeries = shareholding?.diiHoldingQuarterly ?? [];
+  const publicSeries = shareholding?.publicHoldingQuarterly ?? [];
+
+  const maxLength = Math.max(
+    promoterSeries.length,
+    fiiSeries.length,
+    diiSeries.length,
+    publicSeries.length,
+  );
+
+  const data = Array.from({ length: maxLength }, (_, index) => {
+    const promoterPoint = promoterSeries[index];
+    const fiiPoint = fiiSeries[index];
+    const diiPoint = diiSeries[index];
+    const publicPoint = publicSeries[index];
+
+    return {
+      period:
+        promoterPoint?.period ??
+        fiiPoint?.period ??
+        diiPoint?.period ??
+        publicPoint?.period ??
+        `Q${index + 1}`,
+      Promoters: promoterPoint?.value ?? null,
+      FIIs: fiiPoint?.value ?? null,
+      DIIs: diiPoint?.value ?? null,
+      Public: publicPoint?.value ?? null,
+    };
+  }).filter(
+    (point) =>
+      point.Promoters !== null ||
+      point.FIIs !== null ||
+      point.DIIs !== null ||
+      point.Public !== null,
+  );
 
   return (
     <ResponsiveContainer width="100%" height={270}>
