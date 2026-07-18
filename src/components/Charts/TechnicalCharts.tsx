@@ -56,7 +56,7 @@ export function MacdChart({ candles }: TechnicalChartsProps) {
         <Tooltip />
         <Bar dataKey="histogram" name="Histogram" barSize={8}>
           {candles.map((entry) => (
-            <Cell key={entry.date} fill={entry.histogram >= 0 ? '#16a34a' : '#dc2626'} />
+            <Cell key={entry.date} fill={(entry.histogram ?? 0) >= 0 ? '#16a34a' : '#dc2626'} />
           ))}
         </Bar>
         <Line type="monotone" dataKey="macd" name="MACD" stroke="#2563eb" strokeWidth={2.5} dot={false} />

@@ -118,7 +118,7 @@ export function OrderWinsPage() {
     const { value } = event.target;
     setFilters((current) => ({
       ...current,
-      [field]: field === 'pageno' ? Number.parseInt(value || '1', 10) || 1 : value,
+      [field]: field === 'pageno' ? (value === '' ? NaN : Number.parseInt(value, 10)) : value,
     }));
   };
 
@@ -156,7 +156,7 @@ export function OrderWinsPage() {
 
             <Grid container spacing={2} alignItems="flex-end">
               <Grid item xs={12} sm={6} md={2}>
-                <TextField fullWidth label="Page No" type="number" value={filters.pageno} onChange={handleFieldChange('pageno')} inputProps={{ min: 1 }} size="small" />
+                <TextField fullWidth label="Page No" type="number" value={Number.isNaN(filters.pageno) ? '' : filters.pageno} onChange={handleFieldChange('pageno')} inputProps={{ min: 1 }} size="small" />
               </Grid>
               <Grid item xs={12} sm={6} md={3}>
                 <TextField fullWidth label="Prev Date" type="date" value={filters.prevDate} onChange={handleFieldChange('prevDate')} size="small" InputLabelProps={{ shrink: true }} />

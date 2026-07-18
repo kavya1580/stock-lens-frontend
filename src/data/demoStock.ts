@@ -1,96 +1,100 @@
-import type { CompanyFundamentals, StockScore, TechnicalIndicators } from '../types/stock';
+import type { CompanyFundamentals, SeriesPoint, StockScore, TechnicalIndicators } from '../types/stock';
 
 const quarters = ['Sep 25', 'Dec 25', 'Mar 26', 'Jun 26'];
 const cashYears = ['FY21', 'FY22', 'FY23', 'FY24', 'FY25'];
 
+function seriesRecord(periods: string[], values: number[]): Record<string, string> {
+  return Object.fromEntries(periods.map((period, index) => [period, String(values[index])]));
+}
+
+function seriesPoints(periods: string[], values: number[]): SeriesPoint[] {
+  return periods.map((period, index) => ({ period, value: values[index] }));
+}
+
+const promoterHoldingQuarterlyValues = [50.1, 50.2, 50.3, 50.3];
+const fiiHoldingQuarterlyValues = [20.7, 21.1, 21.5, 21.9];
+const diiHoldingQuarterlyValues = [18.4, 18.2, 17.9, 17.6];
+const publicHoldingQuarterlyValues = [10.8, 10.5, 10.3, 10.2];
+
 export const demoFundamentals: CompanyFundamentals = {
-  companyName: 'Reliance Industries Limited',
+  // Company Identification
   symbol: 'RELIANCE',
-  currentPrice: 2864,
-  dailyChangePercent: 1.42,
+  companyName: 'Reliance Industries Limited',
   sector: 'Energy & Consumer',
   industry: 'Oil to Chemicals, Retail, Telecom',
-  snapshot: [
-    { label: 'Market Cap', value: '19.38L Cr', helper: 'Large cap leader', tone: 'excellent' },
-    { label: 'Current Price', value: 'Rs 2,864' },
-    { label: 'Stock PE', value: 27.4 },
-    { label: 'Industry PE', value: 24.1 },
-    { label: 'Relative PE', value: '1.14x', helper: 'Mild premium' },
-    { label: 'PB Ratio', value: '2.28x' },
-    { label: 'EV/EBITDA', value: '13.6x' },
-    { label: 'Dividend Yield', value: '0.34%' },
-    { label: 'Book Value', value: 'Rs 1,257' },
-    { label: 'Face Value', value: 'Rs 10' },
-  ],
-  profitability: [
-    { label: 'ROE', value: '9.1%', helper: 'Stable', tone: 'good' },
-    { label: 'ROCE', value: '10.8%', helper: 'Improving', tone: 'good' },
-    { label: 'ROA', value: '4.8%' },
-    { label: 'EPS', value: 'Rs 104.7' },
-    { label: 'Operating Margin', value: '16.2%', tone: 'excellent' },
-    { label: 'Net Margin', value: '8.4%' },
-  ],
-  growth: {
-    sales: [
-      { label: '3Y', value: '17.8%' },
-      { label: '5Y', value: '12.6%' },
-      { label: '10Y', value: '10.1%' },
-      { label: 'Latest', value: '9.4%', tone: 'good' },
-    ],
-    profit: [
-      { label: '3Y', value: '15.2%' },
-      { label: '5Y', value: '13.5%' },
-      { label: '10Y', value: '12.9%' },
-      { label: 'Latest', value: '10.7%', tone: 'good' },
-    ],
-    stockCagr: [
-      { label: '3Y', value: '18.6%' },
-      { label: '5Y', value: '16.8%' },
-      { label: '10Y', value: '17.4%' },
-      { label: 'Latest', value: '21.2%', tone: 'excellent' },
-    ],
-  },
-  financialHealth: [
-    { label: 'Borrowings', value: '3.22L Cr' },
-    { label: 'Reserves', value: '8.64L Cr', tone: 'excellent' },
-    { label: 'Debt to Equity', value: '0.42x', tone: 'good' },
-    { label: 'Current Ratio', value: '1.25x' },
-    { label: 'Interest Coverage', value: '5.9x', tone: 'good' },
-  ],
-  cashFlow: {
-    metrics: [
-      { label: 'Operating Cash Flow', value: '1.59L Cr', tone: 'excellent' },
-      { label: 'Free Cash Flow', value: '42,800 Cr', tone: 'good' },
-      { label: 'Net Cash Flow', value: '8,450 Cr' },
-      { label: 'CFO / Operating Profit', value: '0.91x', tone: 'good' },
-    ],
-    operatingCashFlowSeries: cashYears.map((period, index) => ({ period, value: [86000, 101400, 122800, 141200, 159000][index] })),
-    freeCashFlowSeries: cashYears.map((period, index) => ({ period, value: [18200, 24600, 31800, 37100, 42800][index] })),
-    netCashFlowSeries: cashYears.map((period, index) => ({ period, value: [-4200, 9300, 6800, 11200, 8450][index] })),
-  },
-  efficiency: [
-    { label: 'Asset Turnover', value: '0.58x' },
-    { label: 'Inventory Turnover', value: '7.2x', tone: 'good' },
-    { label: 'Debtor Days', value: '18' },
-    { label: 'Receivable Days', value: '21' },
-    { label: 'Working Capital Days', value: '36' },
-    { label: 'Inventory Days', value: '51' },
-    { label: 'Days Payable', value: '43' },
-    { label: 'Cash Conversion Cycle', value: '29 days', tone: 'good' },
-  ],
+
+  // Current Price & Performance
+  currentPrice: 2864,
+  marketCap: '19.38L Cr',
+  dailyChangePercent: 1.42,
+  eps: 'Rs 104.7',
+
+  // Valuation Metrics
+  stockPE: '27.4',
+  industryPE: '24.1',
+  relativePE: '1.14x',
+  pbRatio: '2.28x',
+  evEbitda: '13.6x',
+  dividendYield: '0.34%',
+  dividendPayoutLatest: '18.5%',
+  promoterPledge: '0.0%',
+
+  // Quality & Returns
+  roce: '10.8%',
+  roe: '9.1%',
+  roa: '4.8%',
+
+  // Growth Metrics
+  salesGrowth3Y: '17.8%',
+  salesGrowth5Y: '12.6%',
+  profitGrowth3Y: '15.2%',
+  profitGrowth5Y: '13.5%',
+
+  // Profitability
+  operatingProfitMargin: '16.2%',
+  netProfitMargin: '8.4%',
+
+  // Financial Health
+  debtToEquity: '0.42x',
+  currentRatio: '1.25x',
+  interestCoverage: '5.9x',
+  borrowings: '3.22L Cr',
+  reserves: '8.64L Cr',
+
+  // Cash Flow
+  operatingCashFlow: '1.59L Cr',
+  freeCashFlow: '42,800 Cr',
+  netCashFlow: '8,450 Cr',
+
+  // Shareholding
+  promoterHolding: '50.3%',
+  fiiHolding: '21.9%',
+  diiHolding: '17.6%',
+  publicHolding: '10.2%',
+
+  // Series Data for Charts
+  operatingCashFlowSeries: seriesRecord(cashYears, [86000, 101400, 122800, 141200, 159000]),
+  freeCashFlowSeries: seriesRecord(cashYears, [18200, 24600, 31800, 37100, 42800]),
+  netCashFlowSeries: seriesRecord(cashYears, [-4200, 9300, 6800, 11200, 8450]),
+  epsQuarterly: seriesRecord(quarters, [24.1, 25.6, 26.8, 28.2]),
+  opmQuarterly: seriesRecord(quarters, [15.4, 15.8, 16.0, 16.2]),
+
+  // Shareholding Quarterly Trends
+  promoterHoldingQuarterly: seriesRecord(quarters, promoterHoldingQuarterlyValues),
+  fiiHoldingQuarterly: seriesRecord(quarters, fiiHoldingQuarterlyValues),
+  diiHoldingQuarterly: seriesRecord(quarters, diiHoldingQuarterlyValues),
+  publicHoldingQuarterly: seriesRecord(quarters, publicHoldingQuarterlyValues),
+
+  // Shareholding object for components
   shareholding: {
     current: { promoters: 50.3, fiis: 21.9, diis: 17.6, public: 10.2 },
-    promoterHoldingQuarterly: quarters.map((period, index) => ({ period, value: [50.1, 50.2, 50.3, 50.3][index] })),
-    fiiHoldingQuarterly: quarters.map((period, index) => ({ period, value: [20.7, 21.1, 21.5, 21.9][index] })),
-    diiHoldingQuarterly: quarters.map((period, index) => ({ period, value: [18.4, 18.2, 17.9, 17.6][index] })),
-    publicHoldingQuarterly: quarters.map((period, index) => ({ period, value: [10.8, 10.5, 10.3, 10.2][index] })),
+    promoterHoldingQuarterly: seriesPoints(quarters, promoterHoldingQuarterlyValues),
+    fiiHoldingQuarterly: seriesPoints(quarters, fiiHoldingQuarterlyValues),
+    diiHoldingQuarterly: seriesPoints(quarters, diiHoldingQuarterlyValues),
+    publicHoldingQuarterly: seriesPoints(quarters, publicHoldingQuarterlyValues),
   },
-  sectorInformation: [
-    { label: 'Broad Sector', value: 'Diversified' },
-    { label: 'Sector', value: 'Energy & Consumer Platforms' },
-    { label: 'Broad Industry', value: 'Oil, Retail, Telecom' },
-    { label: 'Industry', value: 'Integrated Conglomerate' },
-  ],
+
+  // Insights
   pros: ['Scale advantages across core businesses', 'Free cash flow trend is improving', 'Institutional ownership remains healthy', 'Multiple consumer growth engines'],
   cons: ['Valuation trades above industry average', 'Capex intensity remains high', 'Energy margins can be cyclical'],
 };
@@ -123,6 +127,14 @@ export const demoIndicators: TechnicalIndicators = {
     };
   }),
   latest: {
+    close: 2864,
+    change: 40,
+    changePercent: 1.42,
+    volume: 5100000,
+    averageVolume: 5100000,
+    rsi: 58,
+    macd: 12.4,
+    macdSignalLine: 9.1,
     trendSignal: 'Bullish above SMA50',
     rsiSignal: 'Healthy momentum',
     macdSignal: 'Positive crossover',

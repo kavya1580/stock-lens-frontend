@@ -1,5 +1,4 @@
 import { Card, CardContent, Grid, Stack, Typography } from '@mui/material';
-import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import BusinessCenterIcon from '@mui/icons-material/BusinessCenter';
 import CampaignIcon from '@mui/icons-material/Campaign';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
@@ -10,18 +9,10 @@ import ShieldIcon from '@mui/icons-material/Shield';
 import { OrderWinsPage } from '../../pages/OrderWins/OrderWinsPage';
 
 interface PlaceholderTabsProps {
-  type: 'ai' | 'orders' | 'more';
+  type: 'orders' | 'more';
 }
 
 const content = {
-  ai: [
-    ['Overall AI Opinion', 'Coming Soon', AutoAwesomeIcon],
-    ['Business Quality', 'Coming Soon', InsightsIcon],
-    ['Risks', 'Coming Soon', ShieldIcon],
-    ['Competitive Advantage', 'Coming Soon', BusinessCenterIcon],
-    ['Earnings Summary', 'Coming Soon', NewspaperIcon],
-    ['AI Chat', 'Coming Soon', QueryStatsIcon],
-  ],
   orders: [
     ['Company announcements', 'Future integration', CampaignIcon],
     ['Order wins', 'Future integration', BusinessCenterIcon],
@@ -37,12 +28,10 @@ const content = {
     ['Quarterly Comparison', 'Upcoming Feature', QueryStatsIcon],
     ['Annual Reports', 'Upcoming Feature', NewspaperIcon],
     ['Dividend History', 'Upcoming Feature', CalendarMonthIcon],
-    ['Earnings Calendar', 'Upcoming Feature', CalendarMonthIcon],
   ],
 };
 
 const headings = {
-  ai: ['AI Analysis', 'Premium research intelligence modules are staged for a future release.'],
   orders: ['Order Wins', 'Track announcements, contracts, tenders, and capex signals in a future release.'],
   more: ['More', 'Additional research workflows planned for deeper investigation.'],
 };

@@ -28,6 +28,10 @@ interface FundamentalsTabProps {
   score: StockScore;
 }
 
+function isEmptyMetric(metric: Metric) {
+  return !metric.value || metric.value === "—";
+}
+
 function MetricGrid({
   metrics,
   dense = false,
@@ -35,9 +39,10 @@ function MetricGrid({
   metrics: Metric[];
   dense?: boolean;
 }) {
+  const visibleMetrics = metrics.filter((metric) => !isEmptyMetric(metric));
   return (
     <Grid container spacing={2}>
-      {metrics.map((metric) => (
+      {visibleMetrics.map((metric) => (
         <Grid item xs={12} sm={6} md={dense ? 3 : 2.4} key={metric.label}>
           <MetricCard metric={metric} dense={dense} />
         </Grid>
@@ -47,6 +52,7 @@ function MetricGrid({
 }
 
 function GrowthBlock({ title, metrics }: { title: string; metrics: Metric[] }) {
+  const visibleMetrics = metrics.filter((metric) => !isEmptyMetric(metric));
   return (
     <Card variant="outlined" sx={{ height: "100%" }}>
       <CardContent>
@@ -54,7 +60,7 @@ function GrowthBlock({ title, metrics }: { title: string; metrics: Metric[] }) {
           {title}
         </Typography>
         <Stack spacing={1.5}>
-          {metrics.map((metric) => (
+          {visibleMetrics.map((metric) => (
             <Box key={metric.label}>
               <Stack
                 direction="row"
@@ -93,6 +99,7 @@ export function FundamentalsTab({ fundamentals, score }: FundamentalsTabProps) {
     { label: "P/B Ratio", value: fundamentals.pbRatio },
     { label: "EV/EBITDA", value: fundamentals.evEbitda },
     { label: "Dividend Yield", value: fundamentals.dividendYield },
+    { label: "Dividend Payout", value: fundamentals.dividendPayoutLatest },
   ];
 
   const qualityMetrics: Metric[] = [
@@ -120,6 +127,7 @@ export function FundamentalsTab({ fundamentals, score }: FundamentalsTabProps) {
     { label: "Interest Coverage", value: fundamentals.interestCoverage },
     { label: "Borrowings", value: fundamentals.borrowings },
     { label: "Reserves", value: fundamentals.reserves },
+    { label: "Promoter Pledge", value: fundamentals.promoterPledge },
   ];
 
   const cashFlowMetrics: Metric[] = [

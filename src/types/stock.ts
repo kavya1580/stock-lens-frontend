@@ -1,5 +1,11 @@
 export type ScoreTone = 'excellent' | 'good' | 'watch' | 'risk';
 
+export interface StockSearchResult {
+  symbol: string;
+  name: string;
+  series: string;
+}
+
 export interface Metric {
   label: string;
   value: string | number;
@@ -37,6 +43,8 @@ export interface CompanyFundamentals {
   roce: string;
   roe: string;
   roa: string;
+  dividendPayoutLatest: string;
+  promoterPledge: string;
 
   // Growth Metrics
   salesGrowth3Y: string;
@@ -105,17 +113,17 @@ export interface IndicatorPoint {
   low: number;
   close: number;
   volume: number;
-  sma20: number;
-  sma50: number;
-  ema20: number;
-  rsi: number;
-  macd: number;
-  signal: number;
-  histogram: number;
-  bollingerUpper: number;
-  bollingerMiddle: number;
-  bollingerLower: number;
-  averageVolume: number;
+  sma20: number | null;
+  sma50: number | null;
+  ema20: number | null;
+  rsi: number | null;
+  macd: number | null;
+  signal: number | null;
+  histogram: number | null;
+  bollingerUpper: number | null;
+  bollingerMiddle: number | null;
+  bollingerLower: number | null;
+  averageVolume: number | null;
 }
 
 export interface TechnicalIndicators {
@@ -123,6 +131,14 @@ export interface TechnicalIndicators {
   range: string;
   candles: IndicatorPoint[];
   latest: {
+    close: number;
+    change: number;
+    changePercent: number;
+    volume: number;
+    averageVolume: number | null;
+    rsi: number | null;
+    macd: number | null;
+    macdSignalLine: number | null;
     trendSignal: string;
     rsiSignal: string;
     macdSignal: string;
@@ -178,4 +194,78 @@ export interface AwardWinningStocksPage {
   pageNo: number;
   totalPages?: number | null;
   totalCount?: number | null;
+}
+
+export interface UpcomingResultStock {
+  companyName?: string;
+  symbol?: string;
+  marketCap?: string;
+  fundamentalScore?: number | string;
+  rating?: string;
+  boardMeetingDate?: string;
+  expectedDirection?: string;
+  expectedNote?: string;
+  announcementHeadline?: string;
+  announcementDate?: string;
+  sourceUrl?: string;
+}
+
+export interface AnnouncedResultStock {
+  companyName?: string;
+  symbol?: string;
+  marketCap?: string;
+  fundamentalScore?: number | string;
+  rating?: string;
+  resultDate?: string;
+  latestQuarterSales?: string;
+  latestQuarterNetProfit?: string;
+  qoqProfitGrowthPercent?: number | string;
+  priorTrendDirection?: string;
+  actualVsExpected?: string;
+  note?: string;
+  announcementHeadline?: string;
+  announcementDate?: string;
+  sourceUrl?: string;
+}
+
+export interface ResultsCalendarQuery {
+  pageno?: number;
+  prevDate?: string;
+  toDate?: string;
+  search?: string;
+}
+
+export interface UpcomingResultsPage {
+  items: UpcomingResultStock[];
+  pageNo: number;
+  totalPages?: number | null;
+  totalCount?: number | null;
+}
+
+export interface AnnouncedResultsPage {
+  items: AnnouncedResultStock[];
+  pageNo: number;
+  totalPages?: number | null;
+  totalCount?: number | null;
+}
+
+export interface AiAnalysis {
+  verdict: string;
+  overallOpinion: string;
+  businessQuality: string;
+  risks: string;
+  competitiveAdvantage: string;
+  earningsSummary: string;
+}
+
+export interface AiChatMessage {
+  role: 'user' | 'model';
+  content: string;
+}
+
+export interface StockNewsItem {
+  title: string;
+  link: string;
+  source: string;
+  publishedAt: string;
 }

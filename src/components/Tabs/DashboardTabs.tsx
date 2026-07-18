@@ -3,6 +3,8 @@ import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
 import AutoGraphIcon from '@mui/icons-material/AutoGraph';
 import PsychologyIcon from '@mui/icons-material/Psychology';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
+import EventAvailableIcon from '@mui/icons-material/EventAvailable';
+import NewspaperIcon from '@mui/icons-material/Newspaper';
 import MoreHorizIcon from '@mui/icons-material/MoreHoriz';
 
 interface DashboardTabsProps {
@@ -15,6 +17,8 @@ const tabs = [
   { label: 'Technical Analysis', icon: <AutoGraphIcon /> },
   { label: 'AI Analysis', icon: <PsychologyIcon /> },
   { label: 'Order Wins', icon: <ReceiptLongIcon /> },
+  { label: 'Results Calendar', icon: <EventAvailableIcon /> },
+  { label: 'News', icon: <NewspaperIcon /> },
   { label: 'More', icon: <MoreHorizIcon /> },
 ];
 

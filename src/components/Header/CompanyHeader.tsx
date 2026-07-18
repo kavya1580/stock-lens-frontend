@@ -8,6 +8,7 @@ import {
   Typography,
 } from "@mui/material";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
+import TrendingDownIcon from "@mui/icons-material/TrendingDown";
 import type { CompanyFundamentals, StockScore } from "../../types/stock";
 import { currency, percent } from "../../utils/format";
 import { CircularScore } from "../ScoreCard/CircularScore";
@@ -67,7 +68,7 @@ export function CompanyHeader({
                     Daily Change
                   </Typography>
                   <Chip
-                    icon={<TrendingUpIcon />}
+                    icon={positive ? <TrendingUpIcon /> : <TrendingDownIcon />}
                     label={percent(fundamentals.dailyChangePercent)}
                     color={positive ? "success" : "error"}
                     variant="outlined"
