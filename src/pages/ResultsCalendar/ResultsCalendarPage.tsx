@@ -6,6 +6,7 @@ import {
   Card,
   CardContent,
   Grid,
+  LinearProgress,
   Stack,
   Table,
   TableBody,
@@ -21,17 +22,14 @@ import {
 } from '@mui/material';
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { AnnouncedResultCard, AnnouncedResultTableRow } from '../../components/ResultsCalendar/AnnouncedResultItem';
-import { UpcomingResultCard, UpcomingResultTableRow } from '../../components/ResultsCalendar/UpcomingResultItem';
-import { getAnnouncedResults, getUpcomingResults } from '../../services/stockApi';
-import type { AnnouncedResultStock, ResultsCalendarQuery, UpcomingResultStock } from '../../types/stock';
+import { getAnnouncedResults, getAnnouncedResultsProgress } from '../../services/stockApi';
+import type { AnnouncedResultStock, AnnouncedResultsEnrichmentProgress, ResultsCalendarQuery } from '../../types/stock';
 
-type ResultsMode = 'upcoming' | 'announced';
+type LookbackDays = 1 | 2;
 
 interface ResultsFilters {
   pageno: number;
-  prevDate: string;
-  toDate: string;
-  search: string;
+  lookbackDays: LookbackDays;
 }
 
 interface LoadedPageInfo {
@@ -40,39 +38,28 @@ interface LoadedPageInfo {
   totalCount: number | null;
 }
 
-const getTodayInputValue = (offsetDays = 0) => {
-  const date = new Date();
-  date.setDate(date.getDate() + offsetDays);
-  const timezoneOffset = date.getTimezoneOffset() * 60_000;
-  return new Date(date.getTime() - timezoneOffset).toISOString().slice(0, 10);
-};
+const PROGRESS_POLL_MS = 600;
 
 const createDefaultFilters = (): ResultsFilters => ({
   pageno: 1,
-  prevDate: getTodayInputValue(-7),
-  toDate: getTodayInputValue(7),
-  search: 'P',
+  lookbackDays: 2,
 });
 
 function normaliseFilters(filters: ResultsFilters): ResultsFilters {
   return {
     pageno: Number.isFinite(filters.pageno) && filters.pageno > 0 ? Math.floor(filters.pageno) : 1,
-    prevDate: filters.prevDate,
-    toDate: filters.toDate,
-    search: filters.search,
+    lookbackDays: filters.lookbackDays === 1 ? 1 : 2,
   };
 }
 
 function queryFromFilters(filters: ResultsFilters): ResultsCalendarQuery {
   return {
     pageno: filters.pageno,
-    prevDate: filters.prevDate,
-    toDate: filters.toDate,
-    search: filters.search,
+    lookbackDays: filters.lookbackDays,
   };
 }
 
-// BSE's feed itself is ordered by filing timestamp, which has nothing to do with company quality.
+// Screener's own feed is ordered by filing/recency, which has nothing to do with company quality.
 // Sort best-to-worst by Fundamental Score instead — same convention as OrderWinsPage's score sort.
 // Missing/unresolved scores ("Insufficient Data") sink to the bottom rather than sorting arbitrarily.
 function scoreValue(score?: number | string): number {
@@ -82,100 +69,114 @@ function scoreValue(score?: number | string): number {
 
 export function ResultsCalendarPage() {
   const theme = useTheme();
-  const [mode, setMode] = useState<ResultsMode>('upcoming');
   const [filters, setFilters] = useState<ResultsFilters>(createDefaultFilters);
-  const [upcomingStocks, setUpcomingStocks] = useState<UpcomingResultStock[]>([]);
   const [announcedStocks, setAnnouncedStocks] = useState<AnnouncedResultStock[]>([]);
   const [pageInfo, setPageInfo] = useState<LoadedPageInfo>({ pageNo: 1, totalPages: null, totalCount: null });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [progress, setProgress] = useState<AnnouncedResultsEnrichmentProgress | null>(null);
   const requestIdRef = useRef(0);
+  const progressIntervalRef = useRef<number | null>(null);
 
-  const loadStocks = async (nextMode: ResultsMode, nextFilters: ResultsFilters) => {
+  const stopProgressPolling = () => {
+    if (progressIntervalRef.current !== null) {
+      window.clearInterval(progressIntervalRef.current);
+      progressIntervalRef.current = null;
+    }
+  };
+
+  const startProgressPolling = () => {
+    stopProgressPolling();
+    setProgress(null);
+    progressIntervalRef.current = window.setInterval(() => {
+      void getAnnouncedResultsProgress()
+        .then((snapshot) => {
+          if (snapshot.total > 0) {
+            setProgress(snapshot);
+          }
+        })
+        .catch(() => {
+          // Best-effort only — a missed poll tick just means the indicator doesn't update this cycle.
+        });
+    }, PROGRESS_POLL_MS);
+  };
+
+  useEffect(() => stopProgressPolling, []);
+
+  const loadStocks = async (nextFilters: ResultsFilters) => {
     const requestId = requestIdRef.current + 1;
     requestIdRef.current = requestId;
 
     setIsLoading(true);
     setError(null);
+    startProgressPolling();
 
     try {
       const query = queryFromFilters(normaliseFilters(nextFilters));
-      if (nextMode === 'upcoming') {
-        const response = await getUpcomingResults(query);
-        if (requestIdRef.current !== requestId) return;
-        setUpcomingStocks(response.items);
-        setPageInfo({
-          pageNo: response.pageNo,
-          totalPages: typeof response.totalPages === 'number' ? response.totalPages : null,
-          totalCount: typeof response.totalCount === 'number' ? response.totalCount : null,
-        });
-      } else {
-        const response = await getAnnouncedResults(query);
-        if (requestIdRef.current !== requestId) return;
-        setAnnouncedStocks(response.items);
-        setPageInfo({
-          pageNo: response.pageNo,
-          totalPages: typeof response.totalPages === 'number' ? response.totalPages : null,
-          totalCount: typeof response.totalCount === 'number' ? response.totalCount : null,
-        });
-      }
+      const response = await getAnnouncedResults(query);
+      if (requestIdRef.current !== requestId) return;
+      setAnnouncedStocks(response.items);
+      setPageInfo({
+        pageNo: response.pageNo,
+        totalPages: typeof response.totalPages === 'number' ? response.totalPages : null,
+        totalCount: typeof response.totalCount === 'number' ? response.totalCount : null,
+      });
     } catch (err) {
       if (requestIdRef.current !== requestId) return;
       setError(err instanceof Error ? err.message : 'Unable to fetch results calendar.');
-      if (nextMode === 'upcoming') {
-        setUpcomingStocks([]);
-      } else {
-        setAnnouncedStocks([]);
-      }
+      setAnnouncedStocks([]);
     } finally {
       if (requestIdRef.current === requestId) {
         setIsLoading(false);
+        stopProgressPolling();
       }
     }
   };
 
   useEffect(() => {
-    void loadStocks(mode, filters);
+    void loadStocks(filters);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode]);
+  }, []);
 
-  const handleFieldChange = (field: keyof ResultsFilters) => (event: ChangeEvent<HTMLInputElement>) => {
+  const handlePageNoChange = (event: ChangeEvent<HTMLInputElement>) => {
     const { value } = event.target;
     setFilters((current) => ({
       ...current,
-      [field]: field === 'pageno' ? (value === '' ? NaN : Number.parseInt(value, 10)) : value,
+      pageno: value === '' ? NaN : Number.parseInt(value, 10),
     }));
   };
 
   const handleFetch = () => {
-    void loadStocks(mode, filters);
+    void loadStocks(filters);
   };
 
-  const handleModeChange = (_: unknown, nextMode: ResultsMode | null) => {
-    if (!nextMode || nextMode === mode) return;
-    setMode(nextMode);
+  const handleLookbackChange = (_: unknown, nextLookback: LookbackDays | null) => {
+    if (!nextLookback || nextLookback === filters.lookbackDays) return;
+    const nextFilters = { ...filters, lookbackDays: nextLookback, pageno: 1 };
+    setFilters(nextFilters);
+    void loadStocks(nextFilters);
   };
 
   const shiftPage = (delta: number) => {
     const nextPage = Math.max(1, (filters.pageno || 1) + delta);
     const nextFilters = { ...filters, pageno: nextPage };
     setFilters(nextFilters);
-    void loadStocks(mode, nextFilters);
+    void loadStocks(nextFilters);
   };
 
   const canGoNext = pageInfo.totalPages ? pageInfo.pageNo < pageInfo.totalPages : true;
 
-  const sortedUpcomingStocks = useMemo(
-    () => [...upcomingStocks].sort((a, b) => scoreValue(b.fundamentalScore) - scoreValue(a.fundamentalScore)),
-    [upcomingStocks],
-  );
   const sortedAnnouncedStocks = useMemo(
     () => [...announcedStocks].sort((a, b) => scoreValue(b.fundamentalScore) - scoreValue(a.fundamentalScore)),
     [announcedStocks],
   );
 
-  const stocks = mode === 'upcoming' ? sortedUpcomingStocks : sortedAnnouncedStocks;
-  const isEmpty = !isLoading && !error && stocks.length === 0;
+  const isEmpty = !isLoading && !error && sortedAnnouncedStocks.length === 0;
+  const loadingLabel =
+    progress && progress.total > 0
+      ? `Enriching ${progress.completed} of ${progress.total} companies...`
+      : 'Loading results calendar...';
+  const loadingProgressPercent = progress && progress.total > 0 ? (progress.completed / progress.total) * 100 : null;
 
   return (
     <Stack spacing={2.5}>
@@ -191,28 +192,30 @@ export function ResultsCalendarPage() {
             <Stack spacing={0.5}>
               <Typography variant="h5">Results Calendar</Typography>
               <Typography color="text.secondary">
-                Board-meeting intimations for upcoming results, and recently announced results vs. each company's own
-                trailing profit trend. "Expected" here is an in-house heuristic — not a real analyst/street estimate.
+                Recently announced results vs. each company's own trailing profit trend. "Expected" here is an
+                in-house heuristic — not a real analyst/street estimate.
               </Typography>
             </Stack>
 
-            <ToggleButtonGroup value={mode} exclusive onChange={handleModeChange} color="primary" size="small">
-              <ToggleButton value="upcoming">Upcoming</ToggleButton>
-              <ToggleButton value="announced">Recently Announced</ToggleButton>
-            </ToggleButtonGroup>
-
-            <Grid container spacing={2} alignItems="flex-end">
-              <Grid item xs={12} sm={6} md={3}>
-                <TextField fullWidth label="Prev Date" type="date" value={filters.prevDate} onChange={handleFieldChange('prevDate')} size="small" InputLabelProps={{ shrink: true }} />
-              </Grid>
-              <Grid item xs={12} sm={6} md={3}>
-                <TextField fullWidth label="To Date" type="date" value={filters.toDate} onChange={handleFieldChange('toDate')} size="small" InputLabelProps={{ shrink: true }} />
-              </Grid>
+            <Grid
+              container
+              spacing={2}
+              alignItems="flex-end"
+              sx={{ '& .MuiGrid-item': { paddingTop: 0, paddingLeft: 0 } }}
+            >
               <Grid item xs={12} sm={6} md={4}>
-                <TextField fullWidth label="Search" value={filters.search} onChange={handleFieldChange('search')} size="small" placeholder="Search company or symbol" />
+                <Stack spacing={0.5}>
+                  <Typography variant="caption" color="text.secondary">
+                    Lookback window
+                  </Typography>
+                  <ToggleButtonGroup value={filters.lookbackDays} exclusive onChange={handleLookbackChange} color="primary" size="small">
+                    <ToggleButton value={1}>Today only</ToggleButton>
+                    <ToggleButton value={2}>Today + yesterday</ToggleButton>
+                  </ToggleButtonGroup>
+                </Stack>
               </Grid>
               <Grid item xs={12} sm={6} md={2}>
-                <TextField fullWidth label="Page No" type="number" value={Number.isNaN(filters.pageno) ? '' : filters.pageno} onChange={handleFieldChange('pageno')} inputProps={{ min: 1 }} size="small" />
+                <TextField fullWidth label="Page No" type="number" value={Number.isNaN(filters.pageno) ? '' : filters.pageno} onChange={handlePageNoChange} inputProps={{ min: 1 }} size="small" />
               </Grid>
             </Grid>
 
@@ -256,7 +259,12 @@ export function ResultsCalendarPage() {
         <Card variant="outlined">
           <CardContent>
             <Stack spacing={2}>
-              <Typography variant="h6">Loading results calendar...</Typography>
+              <Typography variant="h6">{loadingLabel}</Typography>
+              {loadingProgressPercent !== null ? (
+                <LinearProgress variant="determinate" value={loadingProgressPercent} />
+              ) : (
+                <LinearProgress />
+              )}
               <Box sx={{ display: 'grid', gap: 1.5, gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' } }}>
                 {Array.from({ length: 6 }).map((_, index) => (
                   <Card key={index} variant="outlined">
@@ -298,59 +306,39 @@ export function ResultsCalendarPage() {
         <Card variant="outlined">
           <CardContent>
             <Stack spacing={0.5}>
-              <Typography variant="h6">No {mode === 'upcoming' ? 'upcoming' : 'recently announced'} results found</Typography>
-              <Typography color="text.secondary">Try widening the date range or adjusting the search keyword.</Typography>
+              <Typography variant="h6">No recently announced results found</Typography>
+              <Typography color="text.secondary">
+                Try widening the lookback window to include yesterday, or check back after today's results are filed.
+              </Typography>
             </Stack>
           </CardContent>
         </Card>
       ) : null}
 
-      {!isLoading && !error && stocks.length > 0 ? (
+      {!isLoading && !error && sortedAnnouncedStocks.length > 0 ? (
         <Stack spacing={2}>
           <Card variant="outlined" sx={{ display: { xs: 'none', md: 'block' } }}>
             <TableContainer>
-              {mode === 'upcoming' ? (
-                <Table stickyHeader size="small">
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Company Name</TableCell>
-                      <TableCell>Symbol</TableCell>
-                      <TableCell>Board Meeting Date</TableCell>
-                      <TableCell>Market Cap</TableCell>
-                      <TableCell>Fundamental Score</TableCell>
-                      <TableCell>Rating</TableCell>
-                      <TableCell>Expected</TableCell>
-                      <TableCell>Source</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {sortedUpcomingStocks.map((stock) => (
-                      <UpcomingResultTableRow key={`${stock.symbol}-${stock.announcementDate || stock.companyName}`} stock={stock} />
-                    ))}
-                  </TableBody>
-                </Table>
-              ) : (
-                <Table stickyHeader size="small">
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Company Name</TableCell>
-                      <TableCell>Symbol</TableCell>
-                      <TableCell>Latest Qtr Net Profit</TableCell>
-                      <TableCell>QoQ Growth</TableCell>
-                      <TableCell>Fundamental Score</TableCell>
-                      <TableCell>Rating</TableCell>
-                      <TableCell>vs. Trend</TableCell>
-                      <TableCell>Result Date</TableCell>
-                      <TableCell>Source</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {sortedAnnouncedStocks.map((stock) => (
-                      <AnnouncedResultTableRow key={`${stock.symbol}-${stock.resultDate || stock.companyName}`} stock={stock} />
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
+              <Table stickyHeader size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Company Name</TableCell>
+                    <TableCell>Symbol</TableCell>
+                    <TableCell>Latest Qtr Net Profit</TableCell>
+                    <TableCell>QoQ Growth</TableCell>
+                    <TableCell>YoY Growth</TableCell>
+                    <TableCell>Fundamental Score</TableCell>
+                    <TableCell>Rating</TableCell>
+                    <TableCell>vs. Trend</TableCell>
+                    <TableCell>Source</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {sortedAnnouncedStocks.map((stock) => (
+                    <AnnouncedResultTableRow key={`${stock.symbol}-${stock.resultDate || stock.companyName}`} stock={stock} />
+                  ))}
+                </TableBody>
+              </Table>
             </TableContainer>
           </Card>
 
@@ -358,13 +346,9 @@ export function ResultsCalendarPage() {
             <Stack spacing={1.5}>
               <Typography variant="h6">Stocks</Typography>
               <Box sx={{ display: 'grid', gap: 1.5, gridTemplateColumns: '1fr' }}>
-                {mode === 'upcoming'
-                  ? sortedUpcomingStocks.map((stock) => (
-                      <UpcomingResultCard key={`${stock.symbol}-${stock.announcementDate || stock.companyName}`} stock={stock} />
-                    ))
-                  : sortedAnnouncedStocks.map((stock) => (
-                      <AnnouncedResultCard key={`${stock.symbol}-${stock.resultDate || stock.companyName}`} stock={stock} />
-                    ))}
+                {sortedAnnouncedStocks.map((stock) => (
+                  <AnnouncedResultCard key={`${stock.symbol}-${stock.resultDate || stock.companyName}`} stock={stock} />
+                ))}
               </Box>
             </Stack>
           </Box>

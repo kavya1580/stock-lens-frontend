@@ -55,19 +55,6 @@ function comparisonTone(value?: string | null): 'success' | 'primary' | 'warning
   return 'default';
 }
 
-function formatAnnouncementDate(value?: string | null): string {
-  if (!value) return '—';
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return value;
-  return new Intl.DateTimeFormat('en-IN', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  }).format(parsed);
-}
-
 export function AnnouncedResultTableRow({ stock }: AnnouncedResultItemProps) {
   return (
     <TableRow hover>
@@ -86,6 +73,7 @@ export function AnnouncedResultTableRow({ stock }: AnnouncedResultItemProps) {
       </TableCell>
       <TableCell>{displayValue(stock.latestQuarterNetProfit)}</TableCell>
       <TableCell>{formatPercent(stock.qoqProfitGrowthPercent)}</TableCell>
+      <TableCell>{formatPercent(stock.yoyProfitGrowthPercent)}</TableCell>
       <TableCell>
         <Chip size="small" label={formatScore(stock.fundamentalScore)} color={scoreTone(stock.fundamentalScore)} variant="filled" />
       </TableCell>
@@ -97,7 +85,6 @@ export function AnnouncedResultTableRow({ stock }: AnnouncedResultItemProps) {
           <Chip size="small" label={displayValue(stock.actualVsExpected)} color={comparisonTone(stock.actualVsExpected)} variant="outlined" />
         </Tooltip>
       </TableCell>
-      <TableCell>{formatAnnouncementDate(stock.resultDate)}</TableCell>
       <TableCell>
         {stock.sourceUrl ? (
           <Link href={stock.sourceUrl} target="_blank" rel="noopener noreferrer" underline="hover" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
@@ -131,7 +118,7 @@ export function AnnouncedResultCard({ stock }: AnnouncedResultItemProps) {
 
           <Stack spacing={1}>
             <Typography variant="body2">
-              <strong>Latest Qtr Net Profit:</strong> {displayValue(stock.latestQuarterNetProfit)} ({formatPercent(stock.qoqProfitGrowthPercent)} QoQ)
+              <strong>Latest Qtr Net Profit:</strong> {displayValue(stock.latestQuarterNetProfit)} ({formatPercent(stock.qoqProfitGrowthPercent)} QoQ, {formatPercent(stock.yoyProfitGrowthPercent)} YoY)
             </Typography>
             <Typography variant="body2">
               <strong>Latest Qtr Sales:</strong> {displayValue(stock.latestQuarterSales)}
@@ -153,9 +140,6 @@ export function AnnouncedResultCard({ stock }: AnnouncedResultItemProps) {
                 {stock.note}
               </Typography>
             ) : null}
-            <Typography variant="body2" color="text.secondary">
-              <strong>Result Date:</strong> {formatAnnouncementDate(stock.resultDate)}
-            </Typography>
           </Stack>
 
           <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6 }}>

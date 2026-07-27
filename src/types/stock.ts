@@ -196,18 +196,9 @@ export interface AwardWinningStocksPage {
   totalCount?: number | null;
 }
 
-export interface UpcomingResultStock {
-  companyName?: string;
-  symbol?: string;
-  marketCap?: string;
-  fundamentalScore?: number | string;
-  rating?: string;
-  boardMeetingDate?: string;
-  expectedDirection?: string;
-  expectedNote?: string;
-  announcementHeadline?: string;
-  announcementDate?: string;
-  sourceUrl?: string;
+export interface AwardWinningStocksEnrichmentProgress {
+  completed: number;
+  total: number;
 }
 
 export interface AnnouncedResultStock {
@@ -220,6 +211,7 @@ export interface AnnouncedResultStock {
   latestQuarterSales?: string;
   latestQuarterNetProfit?: string;
   qoqProfitGrowthPercent?: number | string;
+  yoyProfitGrowthPercent?: number | string;
   priorTrendDirection?: string;
   actualVsExpected?: string;
   note?: string;
@@ -230,16 +222,8 @@ export interface AnnouncedResultStock {
 
 export interface ResultsCalendarQuery {
   pageno?: number;
-  prevDate?: string;
-  toDate?: string;
-  search?: string;
-}
-
-export interface UpcomingResultsPage {
-  items: UpcomingResultStock[];
-  pageNo: number;
-  totalPages?: number | null;
-  totalCount?: number | null;
+  /** Only honoured by the announced-results endpoint; clamped server-side to 1-2. */
+  lookbackDays?: number;
 }
 
 export interface AnnouncedResultsPage {
@@ -247,6 +231,11 @@ export interface AnnouncedResultsPage {
   pageNo: number;
   totalPages?: number | null;
   totalCount?: number | null;
+}
+
+export interface AnnouncedResultsEnrichmentProgress {
+  completed: number;
+  total: number;
 }
 
 export interface AiAnalysis {

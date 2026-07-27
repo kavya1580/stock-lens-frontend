@@ -3,8 +3,10 @@ import type {
   AiAnalysis,
   AiChatMessage,
   AnnouncedResultStock,
+  AnnouncedResultsEnrichmentProgress,
   AnnouncedResultsPage,
   AwardWinningStock,
+  AwardWinningStocksEnrichmentProgress,
   AwardWinningStocksPage,
   AwardWinningStocksQuery,
   CompanyFundamentals,
@@ -17,8 +19,6 @@ import type {
   StockScore,
   StockSearchResult,
   TechnicalIndicators,
-  UpcomingResultStock,
-  UpcomingResultsPage,
 } from '../types/stock';
 
 async function getJson<T>(path: string): Promise<T> {
@@ -118,22 +118,6 @@ function extractListItems(raw: any): any[] {
   return [];
 }
 
-function normalizeUpcomingResultStock(raw: any): UpcomingResultStock {
-  return {
-    companyName: toText(raw?.companyName) || toText(raw?.company_name) || 'Unknown company',
-    symbol: toText(raw?.symbol) || '—',
-    marketCap: toText(raw?.marketCap),
-    fundamentalScore: toOptionalNumber(raw?.fundamentalScore),
-    rating: toText(raw?.rating),
-    boardMeetingDate: toText(raw?.boardMeetingDate),
-    expectedDirection: toText(raw?.expectedDirection),
-    expectedNote: toText(raw?.expectedNote),
-    announcementHeadline: toText(raw?.announcementHeadline),
-    announcementDate: toText(raw?.announcementDate),
-    sourceUrl: toText(raw?.sourceUrl),
-  };
-}
-
 function normalizeAnnouncedResultStock(raw: any): AnnouncedResultStock {
   return {
     companyName: toText(raw?.companyName) || toText(raw?.company_name) || 'Unknown company',
@@ -145,6 +129,7 @@ function normalizeAnnouncedResultStock(raw: any): AnnouncedResultStock {
     latestQuarterSales: toText(raw?.latestQuarterSales),
     latestQuarterNetProfit: toText(raw?.latestQuarterNetProfit),
     qoqProfitGrowthPercent: toOptionalNumber(raw?.qoqProfitGrowthPercent),
+    yoyProfitGrowthPercent: toOptionalNumber(raw?.yoyProfitGrowthPercent),
     priorTrendDirection: toText(raw?.priorTrendDirection),
     actualVsExpected: toText(raw?.actualVsExpected),
     note: toText(raw?.note),
@@ -594,35 +579,37 @@ export async function getAwardWinningStocks(query: AwardWinningStocksQuery = {})
   };
 }
 
+// Polled while a getAwardWinningStocks() call is in flight to show live per-company
+// enrichment progress. Best-effort only — the backend tracker is a single global
+// in-memory counter (this is a single-user app), so a failed poll just means "no
+// update this tick," not a real error worth surfacing.
+export async function getAwardWinningStocksProgress(): Promise<AwardWinningStocksEnrichmentProgress> {
+  const raw = await getJson<any>('/api/stocks/awards/progress');
+  return {
+    completed: Number(raw?.completed) || 0,
+    total: Number(raw?.total) || 0,
+  };
+}
+
 function resultsQueryParams(query: ResultsCalendarQuery): { params: URLSearchParams; pageNo: number } {
   const params = new URLSearchParams();
   const pageNo = Number.isFinite(query.pageno) && (query.pageno || 0) > 0 ? Math.floor(query.pageno || 1) : 1;
 
   params.set('pageNo', String(pageNo));
 
-  const prevDate = normalizeDateParam(query.prevDate);
-  const toDate = normalizeDateParam(query.toDate);
-  const search = (query.search || '').trim();
-
-  if (prevDate) {
-    params.set('prevDate', prevDate);
-  }
-
-  if (toDate) {
-    params.set('toDate', toDate);
-  }
-
-  if (search) {
-    params.set('search', search);
-  }
-
   return { params, pageNo };
 }
 
-export async function getUpcomingResults(query: ResultsCalendarQuery = {}): Promise<UpcomingResultsPage> {
+export async function getAnnouncedResults(query: ResultsCalendarQuery = {}): Promise<AnnouncedResultsPage> {
   const { params, pageNo } = resultsQueryParams(query);
-  const raw = await getJson<any>(`/api/stocks/results/upcoming?${params.toString()}`);
-  const items = extractListItems(raw).map(normalizeUpcomingResultStock);
+
+  const lookbackDays = Number.isFinite(query.lookbackDays) ? Math.floor(query.lookbackDays as number) : null;
+  if (lookbackDays) {
+    params.set('lookbackDays', String(lookbackDays));
+  }
+
+  const raw = await getJson<any>(`/api/stocks/results/announced?${params.toString()}`);
+  const items = extractListItems(raw).map(normalizeAnnouncedResultStock);
   return {
     items,
     pageNo: Number(raw?.pageNo ?? raw?.page ?? pageNo) || pageNo,
@@ -631,14 +618,14 @@ export async function getUpcomingResults(query: ResultsCalendarQuery = {}): Prom
   };
 }
 
-export async function getAnnouncedResults(query: ResultsCalendarQuery = {}): Promise<AnnouncedResultsPage> {
-  const { params, pageNo } = resultsQueryParams(query);
-  const raw = await getJson<any>(`/api/stocks/results/announced?${params.toString()}`);
-  const items = extractListItems(raw).map(normalizeAnnouncedResultStock);
+// Polled while a getAnnouncedResults() call is in flight to show live per-company
+// enrichment progress. Best-effort only — the backend tracker is a single global
+// in-memory counter (this is a single-user app), so a failed poll just means "no
+// update this tick," not a real error worth surfacing.
+export async function getAnnouncedResultsProgress(): Promise<AnnouncedResultsEnrichmentProgress> {
+  const raw = await getJson<any>('/api/stocks/results/announced/progress');
   return {
-    items,
-    pageNo: Number(raw?.pageNo ?? raw?.page ?? pageNo) || pageNo,
-    totalPages: raw?.totalPages ?? raw?.total_pages ?? raw?.pages ?? null,
-    totalCount: raw?.totalCount ?? raw?.total_count ?? raw?.count ?? null,
+    completed: Number(raw?.completed) || 0,
+    total: Number(raw?.total) || 0,
   };
 }

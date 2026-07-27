@@ -1,10 +1,12 @@
 import RefreshIcon from '@mui/icons-material/Refresh';
 import SearchIcon from '@mui/icons-material/Search';
-import { Box, Button, Card, CardContent, Grid, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TableSortLabel, TextField, Typography, useTheme } from '@mui/material';
+import { Box, Button, Card, CardContent, Grid, LinearProgress, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TableSortLabel, TextField, Typography, useTheme } from '@mui/material';
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { AwardWinningStockCard, AwardWinningStockTableRow } from '../../components/OrderWins/AwardWinningStockItem';
-import { getAwardWinningStocks } from '../../services/stockApi';
-import type { AwardWinningStock, AwardWinningStocksQuery } from '../../types/stock';
+import { getAwardWinningStocks, getAwardWinningStocksProgress } from '../../services/stockApi';
+import type { AwardWinningStock, AwardWinningStocksEnrichmentProgress, AwardWinningStocksQuery } from '../../types/stock';
+
+const PROGRESS_POLL_MS = 600;
 
 interface OrderWinsFilters {
   pageno: number;
@@ -72,7 +74,34 @@ export function OrderWinsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<'desc' | 'asc'>('desc');
+  const [progress, setProgress] = useState<AwardWinningStocksEnrichmentProgress | null>(null);
   const requestIdRef = useRef(0);
+  const progressIntervalRef = useRef<number | null>(null);
+
+  const stopProgressPolling = () => {
+    if (progressIntervalRef.current !== null) {
+      window.clearInterval(progressIntervalRef.current);
+      progressIntervalRef.current = null;
+    }
+  };
+
+  const startProgressPolling = () => {
+    stopProgressPolling();
+    setProgress(null);
+    progressIntervalRef.current = window.setInterval(() => {
+      void getAwardWinningStocksProgress()
+        .then((snapshot) => {
+          if (snapshot.total > 0) {
+            setProgress(snapshot);
+          }
+        })
+        .catch(() => {
+          // Best-effort only — a missed poll tick just means the indicator doesn't update this cycle.
+        });
+    }, PROGRESS_POLL_MS);
+  };
+
+  useEffect(() => stopProgressPolling, []);
 
   const loadStocks = async (nextFilters: OrderWinsFilters) => {
     const requestId = requestIdRef.current + 1;
@@ -80,6 +109,7 @@ export function OrderWinsPage() {
 
     setIsLoading(true);
     setError(null);
+    startProgressPolling();
 
     try {
       const response = await getAwardWinningStocks(queryFromFilters(normaliseFilters(nextFilters)));
@@ -103,6 +133,7 @@ export function OrderWinsPage() {
     } finally {
       if (requestIdRef.current === requestId) {
         setIsLoading(false);
+        stopProgressPolling();
       }
     }
   };
@@ -135,6 +166,11 @@ export function OrderWinsPage() {
 
   const canGoNext = pageInfo.totalPages ? pageInfo.pageNo < pageInfo.totalPages : true;
   const isEmpty = !isLoading && !error && sortedStocks.length === 0;
+  const loadingLabel =
+    progress && progress.total > 0
+      ? `Enriching ${progress.completed} of ${progress.total} companies...`
+      : 'Loading award winning stocks...';
+  const loadingProgressPercent = progress && progress.total > 0 ? (progress.completed / progress.total) * 100 : null;
 
   return (
     <Stack spacing={2.5}>
@@ -209,7 +245,12 @@ export function OrderWinsPage() {
         <Card variant="outlined">
           <CardContent>
             <Stack spacing={2}>
-              <Typography variant="h6">Loading award winning stocks...</Typography>
+              <Typography variant="h6">{loadingLabel}</Typography>
+              {loadingProgressPercent !== null ? (
+                <LinearProgress variant="determinate" value={loadingProgressPercent} />
+              ) : (
+                <LinearProgress />
+              )}
               <Box sx={{ display: 'grid', gap: 1.5, gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' } }}>
                 {Array.from({ length: 6 }).map((_, index) => (
                   <Card key={index} variant="outlined">
