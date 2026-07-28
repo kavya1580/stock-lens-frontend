@@ -183,7 +183,7 @@ export interface AwardWinningStock {
 }
 
 export interface AwardWinningStocksQuery {
-  pageno?: number;
+  pageNo?: number;
   prevDate?: string;
   toDate?: string;
   search?: string;
@@ -221,7 +221,7 @@ export interface AnnouncedResultStock {
 }
 
 export interface ResultsCalendarQuery {
-  pageno?: number;
+  pageNo?: number;
   /** Only honoured by the announced-results endpoint; clamped server-side to 1-2. */
   lookbackDays?: number;
 }

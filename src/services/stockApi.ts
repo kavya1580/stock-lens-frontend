@@ -141,8 +141,6 @@ function normalizeAnnouncedResultStock(raw: any): AnnouncedResultStock {
 
 // Transform raw API response to CompanyFundamentals
 function transformFundamentals(raw: any): CompanyFundamentals {
-  console.log("transformFundamentals called with raw:", raw);
-  
   // Helper to safely convert values to strings
   const toString = (value: any): string => {
     if (value === null || value === undefined) return 'N/A';
@@ -153,7 +151,7 @@ function transformFundamentals(raw: any): CompanyFundamentals {
   // Helper to extract percent numbers from various possible fields/strings
   const extractPercent = (value: any): number => {
     if (value === null || value === undefined) return 0;
-    const s = String(value).replace('%', '').replace(/[^0-9.\-]/g, '').trim();
+    const s = String(value).replace('%', '').replace(/[^0-9.-]/g, '').trim();
     const n = parseFloat(s);
     return Number.isFinite(n) ? n : 0;
   };
@@ -394,8 +392,6 @@ function transformDerivedMetrics(raw: Record<string, any> | null | undefined): M
 
 // Transform raw API response to StockScore
 function transformScore(raw: any): StockScore {
-  console.log("transformScore called with raw:", raw);
-
   return {
     finalScore: Number(raw.finalScore) || 0,
     rating: String(raw.rating || 'N/A'),
@@ -492,8 +488,7 @@ export async function getStockBundle(symbol: string): Promise<StockBundle> {
   const normalizedSymbol = symbol.trim().toUpperCase() || 'RELIANCE';
 
   try {
-    console.log("🔄 Fetching stock data for:", normalizedSymbol);
-    // New merged endpoint which returns { fundamentals: {...}, score: {...} }
+    // Merged endpoint returns { fundamentals: {...}, score: {...} }
     const [analysisRaw, indicatorsRaw] = await Promise.all([
       getJson<any>(`/api/stocks/${normalizedSymbol}/fundamentals/analysis`),
       getJson<any>(`/api/stocks/${normalizedSymbol}/indicators?exchange=NSE&range=${INDICATOR_RANGE}`),
@@ -503,17 +498,13 @@ export async function getStockBundle(symbol: string): Promise<StockBundle> {
     const fundamentalsRaw = analysisRaw?.fundamentals ?? analysisRaw ?? {};
     const scoreRaw = analysisRaw?.score ?? (analysisRaw?.score === undefined ? {} : analysisRaw?.score);
 
-    console.log("✅ API responses received:", { analysisRaw, indicatorsRaw });
-
     const fundamentals = transformFundamentals(fundamentalsRaw);
     const indicators = transformIndicators(indicatorsRaw, INDICATOR_RANGE);
     const score = transformScore(scoreRaw);
-    
-    console.log("✅ Transformed fundamentals:", fundamentals);
-    console.log("✅ Transformed score:", score);
+
     return { fundamentals, indicators, score, isDemo: false };
   } catch (error) {
-    console.error("❌ Error fetching stock data:", error);
+    console.error("Falling back to demo data — failed to fetch stock data:", error);
     return {
       fundamentals: { ...demoFundamentals, symbol: normalizedSymbol },
       indicators: demoIndicators,
@@ -548,7 +539,7 @@ export async function sendAiChatMessage(
 
 export async function getAwardWinningStocks(query: AwardWinningStocksQuery = {}): Promise<AwardWinningStocksPage> {
   const params = new URLSearchParams();
-  const pageNo = Number.isFinite(query.pageno) && (query.pageno || 0) > 0 ? Math.floor(query.pageno || 1) : 1;
+  const pageNo = Number.isFinite(query.pageNo) && (query.pageNo || 0) > 0 ? Math.floor(query.pageNo || 1) : 1;
 
   params.set('pageNo', String(pageNo));
 
@@ -593,7 +584,7 @@ export async function getAwardWinningStocksProgress(): Promise<AwardWinningStock
 
 function resultsQueryParams(query: ResultsCalendarQuery): { params: URLSearchParams; pageNo: number } {
   const params = new URLSearchParams();
-  const pageNo = Number.isFinite(query.pageno) && (query.pageno || 0) > 0 ? Math.floor(query.pageno || 1) : 1;
+  const pageNo = Number.isFinite(query.pageNo) && (query.pageNo || 0) > 0 ? Math.floor(query.pageNo || 1) : 1;
 
   params.set('pageNo', String(pageNo));
 

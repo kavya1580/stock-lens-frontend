@@ -28,7 +28,7 @@ import type { AnnouncedResultStock, AnnouncedResultsEnrichmentProgress, ResultsC
 type LookbackDays = 1 | 2;
 
 interface ResultsFilters {
-  pageno: number;
+  pageNo: number;
   lookbackDays: LookbackDays;
 }
 
@@ -41,20 +41,20 @@ interface LoadedPageInfo {
 const PROGRESS_POLL_MS = 600;
 
 const createDefaultFilters = (): ResultsFilters => ({
-  pageno: 1,
+  pageNo: 1,
   lookbackDays: 2,
 });
 
 function normaliseFilters(filters: ResultsFilters): ResultsFilters {
   return {
-    pageno: Number.isFinite(filters.pageno) && filters.pageno > 0 ? Math.floor(filters.pageno) : 1,
+    pageNo: Number.isFinite(filters.pageNo) && filters.pageNo > 0 ? Math.floor(filters.pageNo) : 1,
     lookbackDays: filters.lookbackDays === 1 ? 1 : 2,
   };
 }
 
 function queryFromFilters(filters: ResultsFilters): ResultsCalendarQuery {
   return {
-    pageno: filters.pageno,
+    pageNo: filters.pageNo,
     lookbackDays: filters.lookbackDays,
   };
 }
@@ -142,7 +142,7 @@ export function ResultsCalendarPage() {
     const { value } = event.target;
     setFilters((current) => ({
       ...current,
-      pageno: value === '' ? NaN : Number.parseInt(value, 10),
+      pageNo: value === '' ? NaN : Number.parseInt(value, 10),
     }));
   };
 
@@ -152,14 +152,14 @@ export function ResultsCalendarPage() {
 
   const handleLookbackChange = (_: unknown, nextLookback: LookbackDays | null) => {
     if (!nextLookback || nextLookback === filters.lookbackDays) return;
-    const nextFilters = { ...filters, lookbackDays: nextLookback, pageno: 1 };
+    const nextFilters = { ...filters, lookbackDays: nextLookback, pageNo: 1 };
     setFilters(nextFilters);
     void loadStocks(nextFilters);
   };
 
   const shiftPage = (delta: number) => {
-    const nextPage = Math.max(1, (filters.pageno || 1) + delta);
-    const nextFilters = { ...filters, pageno: nextPage };
+    const nextPage = Math.max(1, (filters.pageNo || 1) + delta);
+    const nextFilters = { ...filters, pageNo: nextPage };
     setFilters(nextFilters);
     void loadStocks(nextFilters);
   };
@@ -215,7 +215,7 @@ export function ResultsCalendarPage() {
                 </Stack>
               </Grid>
               <Grid item xs={12} sm={6} md={2}>
-                <TextField fullWidth label="Page No" type="number" value={Number.isNaN(filters.pageno) ? '' : filters.pageno} onChange={handlePageNoChange} inputProps={{ min: 1 }} size="small" />
+                <TextField fullWidth label="Page No" type="number" value={Number.isNaN(filters.pageNo) ? '' : filters.pageNo} onChange={handlePageNoChange} inputProps={{ min: 1 }} size="small" />
               </Grid>
             </Grid>
 
@@ -224,7 +224,7 @@ export function ResultsCalendarPage() {
                 <Button variant="contained" startIcon={<SearchIcon />} onClick={handleFetch}>
                   Fetch
                 </Button>
-                <Button variant="outlined" onClick={() => shiftPage(-1)} disabled={filters.pageno <= 1 || isLoading}>
+                <Button variant="outlined" onClick={() => shiftPage(-1)} disabled={filters.pageNo <= 1 || isLoading}>
                   Previous
                 </Button>
                 <Button variant="outlined" onClick={() => shiftPage(1)} disabled={!canGoNext || isLoading}>

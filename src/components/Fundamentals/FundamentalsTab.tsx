@@ -170,13 +170,6 @@ export function FundamentalsTab({ fundamentals, score }: FundamentalsTabProps) {
     value: typeof value === "string" ? parseFloat(value) || 0 : value,
   }));
 
-  const opmQuarterlySeries = Object.entries(
-    fundamentals.opmQuarterly || {},
-  ).map(([period, value]) => ({
-    period,
-    value: typeof value === "string" ? parseFloat(value) || 0 : value,
-  }));
-
   return (
     <Stack spacing={3}>
       <Section

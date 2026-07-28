@@ -8,6 +8,7 @@ import { TechnicalTab } from '../../components/Technical/TechnicalTab';
 import { AiAnalysisTab } from '../../components/AI/AiAnalysisTab';
 import { NewsTab } from '../../components/News/NewsTab';
 import { PlaceholderTab } from '../../components/Placeholders/PlaceholderTabs';
+import { OrderWinsPage } from '../OrderWins/OrderWinsPage';
 import { ResultsCalendarPage } from '../ResultsCalendar/ResultsCalendarPage';
 import type { StockBundle } from '../../types/stock';
 
@@ -38,10 +39,10 @@ export function StockDashboard({ data, isLoading, error, symbol, onRetry }: Stoc
           {activeTab === 0 ? <FundamentalsTab fundamentals={data.fundamentals} score={data.score} /> : null}
           {activeTab === 1 ? <TechnicalTab indicators={data.indicators} /> : null}
           {activeTab === 2 ? <AiAnalysisTab symbol={symbol} /> : null}
-          {activeTab === 3 ? <PlaceholderTab type="orders" /> : null}
+          {activeTab === 3 ? <OrderWinsPage /> : null}
           {activeTab === 4 ? <ResultsCalendarPage /> : null}
           {activeTab === 5 ? <NewsTab symbol={symbol} /> : null}
-          {activeTab === 6 ? <PlaceholderTab type="more" /> : null}
+          {activeTab === 6 ? <PlaceholderTab /> : null}
         </Stack>
       ) : null}
     </Container>

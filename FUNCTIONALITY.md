@@ -4,11 +4,11 @@ This doc walks through every feature in the dashboard and explains the
 actual mechanics behind it: what triggers a fetch, how the response is
 transformed, and where the rough edges are. Pairs with `ARCHITECTURE.md`
 (file map, API contract table) — this file is the narrative "how it really
-works" companion. Single-page app, no router (confirmed — no
-`react-router` dependency), one symbol loaded at a time via `useStock`.
+works" companion. Single-page app, no router, one symbol loaded at a time
+via `useStock`.
 
-The dashboard has **7 tabs**; only "More" is still a placeholder. Every
-other tab — including Order Wins — is a real, wired feature today.
+The dashboard has **7 tabs**; only "More" is a placeholder. Every other
+tab — including Order Wins — is a real, wired feature.
 
 ## 1. Search — `SearchBar/StockSearch.tsx`
 
@@ -39,28 +39,19 @@ active symbol.
   `GET /indicators?exchange=NSE&range=6mo` **in parallel** via
   `Promise.all`, then runs three transform functions before handing data
   to components:
-  - `transformFundamentals(raw)` — flattens the ~70-field scrape response
-    into the `CompanyFundamentals` shape components expect, including the
-    now-mapped `dividendPayoutLatest` and `promoterPledge` fields, and
-    correctly reads `industry`/`sector` from the same nested `raw.sector`
-    object (an earlier version read a non-existent top-level `industry`
-    field and always showed "N/A" — that's fixed).
+  - `transformFundamentals(raw)` — flattens the scrape response into the
+    `CompanyFundamentals` shape components expect.
   - `transformScore(raw)` — flattens the score response, including
     `transformDerivedMetrics(raw.derivedMetrics)`, which reads the
-    backend's `derivedMetrics` as the **flat object/map it actually is**
-    (an earlier version guarded with `Array.isArray()`, which was always
-    false against real data, so this section silently rendered empty —
-    also fixed now).
+    backend's `derivedMetrics` as the flat object/map it actually is.
   - `transformIndicators(raw, range)` — the backend returns *parallel
     arrays* (`bars[]`, `sma20[]`, `sma50[]`, `rsi14[]`, `macd.macdLine[]`,
     `bollinger.upper[]`, etc.), not one array of candle objects. This
     function zips them together by index into one flat `IndicatorPoint[]`
-    that the chart components can actually consume directly. (An earlier
-    version passed the raw parallel-array shape straight through, and the
-    Technical tab crashed the whole page reading `indicators.candles`,
-    which didn't exist — also fixed now.) It also derives a `macdSignal`
-    label (Bullish/Bearish Crossover) that the backend doesn't send
-    directly, by comparing the latest MACD line vs. signal line.
+    that the chart components can consume directly. It also derives a
+    `macdSignal` label (Bullish/Bearish Crossover) that the backend
+    doesn't send directly, by comparing the latest MACD line vs. signal
+    line.
 - **All-or-nothing demo fallback**: if *either* of the two parallel calls
   throws for any reason, `getStockBundle` discards both results and
   returns fully static demo data (`data/demoStock.ts`) with `isDemo: true`
@@ -72,8 +63,6 @@ active symbol.
   in normal operation today — worth knowing if you're debugging why an
   error banner never appears even when a real backend call is failing
   (it's silently becoming demo data instead).
-- Contains several leftover `console.log`/`console.error` debug lines
-  (`"🔄 Fetching stock data for:"` etc.) — noise, not wired to any UI.
 
 ## 3. Fundamentals tab — `Fundamentals/FundamentalsTab.tsx`
 
@@ -84,9 +73,7 @@ metric groups, pros/cons, shareholding charts, and the score breakdown.
 - Metric groups (Valuation, Quality, Growth, Profitability, Financial
   Health, Cash Flow) are built manually in this component from flat
   `fundamentals.*` string fields — there's no generic schema-driven
-  renderer, each group is a hardcoded list of which fields go where. The
-  newly-surfaced `dividendPayoutLatest` lives in Valuation and
-  `promoterPledge` in Financial Health.
+  renderer, each group is a hardcoded list of which fields go where.
 - Pros/Cons defensively handle both a plain string and a
   `{title, detail}` object shape per item, since the backend's scraped
   `cons[]` items are simple strings while some score-derived flags carry
@@ -97,8 +84,7 @@ metric groups, pros/cons, shareholding charts, and the score breakdown.
   them up by period index.
 - Score section: `CircularScore` (the 0–100 dial), per-category
   `LinearProgress` breakdown cards, red/green flag chips, and a
-  `MetricGrid` over `score.derivedMetrics` — which now actually populates
-  data since the `transformDerivedMetrics` fix above.
+  `MetricGrid` over `score.derivedMetrics`.
 
 ## 4. Technical Analysis tab — `Technical/TechnicalTab.tsx` + `Charts/TechnicalCharts.tsx`
 
@@ -178,26 +164,24 @@ Google News.
 
 **What it does:** two sub-views — an "Upcoming" tab and a "Recently
 Announced" tab — with a self-referential "expected trend" /
-"beat-or-below trend" indicator on each row. Since the backend's
-Screener.in migration (see backend `FUNCTIONALITY.md` §6), the Upcoming
+"beat-or-below trend" indicator on each row. Since the backend is
+Screener.in-backed (see backend `FUNCTIONALITY.md` §6), the Upcoming
 tab has no live data source and always returns empty; the page defaults
 to Recently Announced accordingly.
 
 **Behind the scenes:**
 - A `ToggleButtonGroup` switches `mode` between `'upcoming'`/`'announced'`,
   which re-fetches automatically (`useEffect` on `mode`) via
-  `getUpcomingResults`/`getAnnouncedResults`. **Defaults to `'announced'`**
-  (changed from `'upcoming'` — Upcoming is a dead end, see below).
-- The page no longer sends `prevDate`/`toDate`/`search` at all — those
-  fields were removed from the UI (and from `ResultsCalendarQuery`) because
-  the backend's `/results/upcoming` and `/results/announced` endpoints
-  never bound them to anything; they were silently swallowed as unbound
-  Spring MVC request params.
-- In their place, Announced mode has a "Lookback window" `ToggleButtonGroup`
-  (Today only / Today + yesterday) that sends the real `lookbackDays`
-  param the backend actually understands (clamped server-side to 1-2).
-  Like the mode toggle, changing it re-fetches immediately rather than
-  waiting for an explicit Fetch click.
+  `getUpcomingResults`/`getAnnouncedResults`. Defaults to `'announced'`,
+  since Upcoming is a dead end (see below).
+- The page doesn't send date-range/search params at all — the backend's
+  `/results/upcoming` and `/results/announced` endpoints only accept
+  `pageNo` (and, for announced, `lookbackDays`). Instead, Announced mode
+  has a "Lookback window" `ToggleButtonGroup` (Today only / Today +
+  yesterday) that sends the real `lookbackDays` param the backend
+  understands (clamped server-side to 1-2). Like the mode toggle, changing
+  it re-fetches immediately rather than waiting for an explicit Fetch
+  click.
 - Selecting Upcoming shows an explicit empty-state explanation ("Screener.in
   doesn't provide a forward-looking results calendar...") instead of the
   generic "no results" message, since this tab is never going to populate
@@ -225,30 +209,21 @@ to Recently Announced accordingly.
 market cap / fundamental score / rating, sortable and paginated.
 
 **Behind the scenes:**
-- **Naming quirk worth knowing**: this page is wired into the dashboard
-  through `components/Placeholders/PlaceholderTabs.tsx`'s `PlaceholderTab`
-  component — `type === 'orders'` short-circuits straight to
-  `<OrderWinsPage />` before reaching any actual placeholder content. It's
-  a fully real, working feature; it's just still organized under a
-  component literally named "Placeholder" left over from before this tab
-  was built out. Only `type === 'more'` still renders genuine placeholder
-  cards today.
-- Loads once on mount only — changing filters requires an explicit
-  Fetch/pagination click, same pattern Results Calendar used to follow.
-  Order Wins still pre-fills its search field with the literal `"P"` (see
-  Known rough edges); Results Calendar's equivalent field was removed
-  entirely as part of the Screener.in migration cleanup, since the backend
-  never honored it.
+- Rendered directly from `StockDashboard` for the Order Wins tab. Loads
+  once on mount only — changing filters requires an explicit Fetch/
+  pagination click.
 - Independently sortable by fundamental score via a clickable column
   header (asc/desc toggle), separate from the pagination controls.
 - Same `requestIdRef` stale-response-discarding pattern as Results
   Calendar.
 - Calls `getAwardWinningStocks`, which sends the page-number query
-  parameter as `pageNo` (capital N) on the wire — this now matches what
-  the backend's `@RequestParam int pageNo` actually binds to. (The local
-  TypeScript query-object field is still named lowercase `pageno`, but
-  that's just an internal variable name — it doesn't affect what's
-  actually sent over HTTP.)
+  parameter as `pageNo` on the wire, matching what the backend's
+  `@RequestParam int pageNo` binds to.
+- While a page loads, polls `getAwardWinningStocksProgress()` every 600ms
+  to show an "Enriching N of M companies..." progress bar — the backend
+  enriches each raw BSE announcement with market cap/score/rating
+  concurrently, and this poll surfaces that in-flight progress rather than
+  just showing an indeterminate spinner.
 
 ## 9. Theme + demo data
 
@@ -272,11 +247,7 @@ market cap / fundamental score / rating, sortable and paginated.
   own `useState`/`useEffect` fetch independently (no React Query/Redux/etc.),
   so switching tabs and back always re-fetches from scratch except where a
   component explicitly avoids it.
-- The "P" default search-filter value on Order Wins looks like a leftover
-  dev default, not an intentional default filter — worth confirming with
-  whoever added it before relying on "no search text" behavior. (Results
-  Calendar's equivalent field was removed entirely during the Screener.in
-  migration cleanup, since the backend never honored it.)
-- `AwardWinningStocksQuery.pageno` (lowercase, TS-only) vs. what's actually
-  sent on the wire (`pageNo`) is a naming inconsistency worth cleaning up
-  even though it's not a functional bug.
+- All API calls use relative paths (`/api/...`), which rely on either a
+  dev-server proxy or same-origin hosting in production — see
+  `ARCHITECTURE.md` "Hosting" before deploying frontend and backend to
+  separate origins.

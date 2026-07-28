@@ -9,7 +9,7 @@ import type { AwardWinningStock, AwardWinningStocksEnrichmentProgress, AwardWinn
 const PROGRESS_POLL_MS = 600;
 
 interface OrderWinsFilters {
-  pageno: number;
+  pageNo: number;
   prevDate: string;
   toDate: string;
   search: string;
@@ -29,15 +29,15 @@ const getTodayInputValue = (offsetDays = 0) => {
 };
 
 const createDefaultFilters = (): OrderWinsFilters => ({
-  pageno: 1,
+  pageNo: 1,
   prevDate: getTodayInputValue(-5),
   toDate: getTodayInputValue(0),
-  search: 'P',
+  search: '',
 });
 
 function normaliseFilters(filters: OrderWinsFilters): OrderWinsFilters {
   return {
-    pageno: Number.isFinite(filters.pageno) && filters.pageno > 0 ? Math.floor(filters.pageno) : 1,
+    pageNo: Number.isFinite(filters.pageNo) && filters.pageNo > 0 ? Math.floor(filters.pageNo) : 1,
     prevDate: filters.prevDate,
     toDate: filters.toDate,
     search: filters.search,
@@ -59,7 +59,7 @@ function sortStocks(stocks: AwardWinningStock[], direction: 'desc' | 'asc') {
 
 function queryFromFilters(filters: OrderWinsFilters): AwardWinningStocksQuery {
   return {
-    pageno: filters.pageno,
+    pageNo: filters.pageNo,
     prevDate: filters.prevDate,
     toDate: filters.toDate,
     search: filters.search,
@@ -149,7 +149,7 @@ export function OrderWinsPage() {
     const { value } = event.target;
     setFilters((current) => ({
       ...current,
-      [field]: field === 'pageno' ? (value === '' ? NaN : Number.parseInt(value, 10)) : value,
+      [field]: field === 'pageNo' ? (value === '' ? NaN : Number.parseInt(value, 10)) : value,
     }));
   };
 
@@ -158,8 +158,8 @@ export function OrderWinsPage() {
   };
 
   const shiftPage = (delta: number) => {
-    const nextPage = Math.max(1, (filters.pageno || 1) + delta);
-    const nextFilters = { ...filters, pageno: nextPage };
+    const nextPage = Math.max(1, (filters.pageNo || 1) + delta);
+    const nextFilters = { ...filters, pageNo: nextPage };
     setFilters(nextFilters);
     void loadStocks(nextFilters);
   };
@@ -192,7 +192,7 @@ export function OrderWinsPage() {
 
             <Grid container spacing={2} alignItems="flex-end">
               <Grid item xs={12} sm={6} md={2}>
-                <TextField fullWidth label="Page No" type="number" value={Number.isNaN(filters.pageno) ? '' : filters.pageno} onChange={handleFieldChange('pageno')} inputProps={{ min: 1 }} size="small" />
+                <TextField fullWidth label="Page No" type="number" value={Number.isNaN(filters.pageNo) ? '' : filters.pageNo} onChange={handleFieldChange('pageNo')} inputProps={{ min: 1 }} size="small" />
               </Grid>
               <Grid item xs={12} sm={6} md={3}>
                 <TextField fullWidth label="Prev Date" type="date" value={filters.prevDate} onChange={handleFieldChange('prevDate')} size="small" InputLabelProps={{ shrink: true }} />
@@ -210,7 +210,7 @@ export function OrderWinsPage() {
                 <Button variant="contained" startIcon={<SearchIcon />} onClick={handleFetch}>
                   Fetch
                 </Button>
-                <Button variant="outlined" onClick={() => shiftPage(-1)} disabled={filters.pageno <= 1 || isLoading}>
+                <Button variant="outlined" onClick={() => shiftPage(-1)} disabled={filters.pageNo <= 1 || isLoading}>
                   Previous
                 </Button>
                 <Button variant="outlined" onClick={() => shiftPage(1)} disabled={!canGoNext || isLoading}>

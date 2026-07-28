@@ -1,64 +1,38 @@
 import { Card, CardContent, Grid, Stack, Typography } from '@mui/material';
 import BusinessCenterIcon from '@mui/icons-material/BusinessCenter';
-import CampaignIcon from '@mui/icons-material/Campaign';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import InsightsIcon from '@mui/icons-material/Insights';
 import NewspaperIcon from '@mui/icons-material/Newspaper';
 import QueryStatsIcon from '@mui/icons-material/QueryStats';
 import ShieldIcon from '@mui/icons-material/Shield';
-import { OrderWinsPage } from '../../pages/OrderWins/OrderWinsPage';
 
-interface PlaceholderTabsProps {
-  type: 'orders' | 'more';
-}
+const content = [
+  ['News Sentiment', 'Upcoming Feature', NewspaperIcon],
+  ['Insider Trading', 'Upcoming Feature', ShieldIcon],
+  ['Mutual Fund Holdings', 'Upcoming Feature', BusinessCenterIcon],
+  ['Institutional Activity', 'Upcoming Feature', InsightsIcon],
+  ['Quarterly Comparison', 'Upcoming Feature', QueryStatsIcon],
+  ['Annual Reports', 'Upcoming Feature', NewspaperIcon],
+  ['Dividend History', 'Upcoming Feature', CalendarMonthIcon],
+] as const;
 
-const content = {
-  orders: [
-    ['Company announcements', 'Future integration', CampaignIcon],
-    ['Order wins', 'Future integration', BusinessCenterIcon],
-    ['New contracts', 'Future integration', InsightsIcon],
-    ['Government tenders', 'Future integration', NewspaperIcon],
-    ['Capex announcements', 'Future integration', CalendarMonthIcon],
-  ],
-  more: [
-    ['News Sentiment', 'Upcoming Feature', NewspaperIcon],
-    ['Insider Trading', 'Upcoming Feature', ShieldIcon],
-    ['Mutual Fund Holdings', 'Upcoming Feature', BusinessCenterIcon],
-    ['Institutional Activity', 'Upcoming Feature', InsightsIcon],
-    ['Quarterly Comparison', 'Upcoming Feature', QueryStatsIcon],
-    ['Annual Reports', 'Upcoming Feature', NewspaperIcon],
-    ['Dividend History', 'Upcoming Feature', CalendarMonthIcon],
-  ],
-};
-
-const headings = {
-  orders: ['Order Wins', 'Track announcements, contracts, tenders, and capex signals in a future release.'],
-  more: ['More', 'Additional research workflows planned for deeper investigation.'],
-};
-
-export function PlaceholderTab({ type }: PlaceholderTabsProps) {
-  if (type === 'orders') {
-    return <OrderWinsPage />;
-  }
-
-  const [title, subtitle] = headings[type];
-
+export function PlaceholderTab() {
   return (
     <Stack spacing={2.5}>
       <Stack spacing={0.5}>
-        <Typography variant="h5">{title}</Typography>
-        <Typography color="text.secondary">{subtitle}</Typography>
+        <Typography variant="h5">More</Typography>
+        <Typography color="text.secondary">Additional research workflows planned for deeper investigation.</Typography>
       </Stack>
       <Grid container spacing={2}>
-        {content[type].map(([label, status, Icon]) => (
-          <Grid item xs={12} sm={6} md={4} key={label as string}>
+        {content.map(([label, status, Icon]) => (
+          <Grid item xs={12} sm={6} md={4} key={label}>
             <Card variant="outlined" sx={{ height: '100%' }}>
               <CardContent>
                 <Stack spacing={2}>
                   <Icon color="primary" fontSize="large" />
                   <Stack spacing={0.5}>
-                    <Typography variant="h6">{label as string}</Typography>
-                    <Typography color="text.secondary">{status as string}</Typography>
+                    <Typography variant="h6">{label}</Typography>
+                    <Typography color="text.secondary">{status}</Typography>
                   </Stack>
                 </Stack>
               </CardContent>
