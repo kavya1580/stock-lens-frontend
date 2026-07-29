@@ -21,8 +21,12 @@ import type {
   TechnicalIndicators,
 } from '../types/stock';
 
+// Empty by default so local dev keeps using the Vite proxy in vite.config.ts (relative /api/...).
+// Set at build time to the deployed backend's URL when frontend and backend are separate origins.
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '';
+
 async function getJson<T>(path: string): Promise<T> {
-  const response = await fetch(path);
+  const response = await fetch(`${API_BASE_URL}${path}`);
 
   if (!response.ok) {
     throw new Error(`Request failed: ${response.status}`);
@@ -32,7 +36,7 @@ async function getJson<T>(path: string): Promise<T> {
 }
 
 async function postJson<T>(path: string, body: unknown): Promise<T> {
-  const response = await fetch(path, {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
